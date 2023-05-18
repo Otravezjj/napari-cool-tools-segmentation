@@ -1,0 +1,4 @@
+name: napari-cool-tools-segmentation
+display_name: Napari COOL Tools Segmentation
+contributions:
+  commands:
