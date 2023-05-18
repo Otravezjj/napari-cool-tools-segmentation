@@ -2,3 +2,10 @@ name: napari-cool-tools-segmentation
 display_name: Napari COOL Tools Segmentation
 contributions:
   commands:
+    - id: napari-cool-tools-segmentation.inference
+      title: Segmentation Inference
+      python_name: napari_cool_tools_segmentation._segmentation:segmentation_inference
+  widgets:
+    - command: napari-cool-tools-segmentation.inference
+      display_name: Segment Inference
+      autogenerate: false
