@@ -4,17 +4,51 @@ This module is contains code for segmenting images
 from pathlib import Path
 from magicgui import magicgui, magic_factory
 from tqdm import tqdm
+from napari.utils.notifications import show_info
+from napari.qt.threading import thread_worker
 from napari.layers import Image, Layer, Labels
 from napari.types import ImageData, LabelsData, LayerDataTuple
 from napari_cool_tools_img_proc import torch,kornia,viewer,device
 
 @magic_factory()
 def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
-    """
+    """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
-        img (Image): Image to be adjusted.
-        gamma(float): Non negative real number.
-        gain (float): Constant multiplier.
+        img (Image): Image/Volume to be segmented.
+        state_dict_path (Path): Path to state dictionary of the network to be used for inference.
+        label_flag (bool): If true return labels layer with relevant masks as unique label values
+                           If false returns volume with unique channels masked with value 1.
+        
+    Returns:
+        Logarithm corrected output image with '_LC' suffix added to name.
+    """
+    b_scan_pix2pixHD_seg_thread(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
+    return
+
+@thread_worker(connect={"returned": viewer.add_layer},progress=True)
+def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
+    """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
+    Args:
+        img (Image): Image/Volume to be segmented.
+        state_dict_path (Path): Path to state dictionary of the network to be used for inference.
+        label_flag (bool): If true return labels layer with relevant masks as unique label values
+                           If false returns volume with unique channels masked with value 1.
+        
+    Returns:
+        Logarithm corrected output image with '_LC' suffix added to name.
+    """
+    show_info(f'B-scan segmentation thread has started')
+    layer = b_scan_pix2pixHD_seg_func(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
+    show_info(f'B-scan segmentation thread has completed')
+    return layer
+
+def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
+    """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
+    Args:
+        img (Image): Image/Volume to be segmented.
+        state_dict_path (Path): Path to state dictionary of the network to be used for inference.
+        label_flag (bool): If true return labels layer with relevant masks as unique label values
+                           If false returns volume with unique channels masked with value 1.
         
     Returns:
         Logarithm corrected output image with '_LC' suffix added to name.

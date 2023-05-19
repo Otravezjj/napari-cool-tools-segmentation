@@ -3,9 +3,9 @@ display_name: Napari COOL Tools Segmentation
 contributions:
   commands:
     - id: napari-cool-tools-segmentation.inference
-      title: Segmentation Inference
+      title: Pix2pixHD B-scan Segmentation
       python_name: napari_cool_tools_segmentation._segmentation:b_scan_pix2pixHD_seg
   widgets:
     - command: napari-cool-tools-segmentation.inference
-      display_name: Segment Inference
+      display_name: Pix2pix B-scan Seg
       autogenerate: false
