@@ -1,6 +1,7 @@
 """
 This module is contains code for segmenting images
 """
+import gc
 from pathlib import Path
 from magicgui import magicgui, magic_factory
 from tqdm import tqdm
@@ -9,6 +10,10 @@ from napari.qt.threading import thread_worker
 from napari.layers import Image, Layer, Labels
 from napari.types import ImageData, LabelsData, LayerDataTuple
 from napari_cool_tools_img_proc import torch,kornia,viewer,device
+
+def memory_stats():
+    print(torch.cuda.memory_allocated()/1024**2)
+    print(torch.cuda.memory_cached()/1024**2)
 
 @magic_factory()
 def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
@@ -75,24 +80,25 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
     }
 
     data = img.data.copy()
-    pt_data = torch.tensor(data,device=device)
-    
-    gen = define_G(**def_g_settings)
-    gen.load_state_dict(state_dict)
-    gen.eval()
 
     try:
         assert data.ndim == 2 or data.ndim == 3, "Only works for data of 2 or 3 dimensions"
     except AssertionError as e:
         print("An error Occured:", str(e))
     else:
+
+        pt_data = torch.tensor(data,device=device)
+    
+        gen = define_G(**def_g_settings)
+        gen.load_state_dict(state_dict)
+        gen.eval()
         
         name = f"{img.name}_Seg"
         add_kwargs = {"name":f"{name}"}
 
         if data.ndim == 2:
-            pt_data = pt_data.unsqueeze(0).repeat(3,1,1)
-            output = gen(pt_data)
+            pt_data2 = pt_data.unsqueeze(0).repeat(3,1,1)
+            output = gen(pt_data2)
             retina = output[0] == 1
             choroid = output[1] == 1
             sclera = output[2] == 1
@@ -103,13 +109,28 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
                 labels[choroid] = 2
                 labels[sclera] = 3
                 labels = labels.to(torch.uint8)
-                labels = labels.detach().cpu().numpy()
+                labels_out = labels.detach().cpu().numpy()
                 layer_type = 'labels'
-                layer = Layer.create(labels,add_kwargs,layer_type)
+                layer = Layer.create(labels_out,add_kwargs,layer_type)
+
+                #clean up
+                del labels_out
+                del labels
+                
             else:
-                output = output.detach().cpu().numpy()
+                output2 = output.detach().cpu().numpy()
                 layer_type = 'image'                
-                layer = Layer.create(output,add_kwargs,layer_type)
+                layer = Layer.create(output2,add_kwargs,layer_type)
+                
+                #clean up
+                del output2
+
+            #clean up
+            del retina
+            del choroid
+            del sclera
+            del output
+            del pt_data2
         
         elif data.ndim == 3:
             outstack = []
@@ -128,21 +149,47 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
                     labels[sclera] = 3
 
                     outstack.append(labels)
+                    #clean up
+                    del labels
 
                 else:
                     outstack.append(output)
-                    pass
+                    #clean up
+                    del output
+
+                #clean up
+                del retina
+                del choroid
+                del sclera
+                del output
+                del temp_data
 
             if label_flag:
-                labels = torch.stack(outstack)
-                print(labels.shape)
-                labels = labels.to(torch.uint8)
-                labels = labels.detach().cpu().numpy()
+                labels2 = torch.stack(outstack)
+                labels2 = labels2.to(torch.uint8)
+                labels_out = labels2.detach().cpu().numpy()
                 layer_type = 'labels'
-                layer = Layer.create(labels,add_kwargs,layer_type)
+                layer = Layer.create(labels_out,add_kwargs,layer_type)
+
+                # clean up
+                del labels_out
+                del labels2
+                del outstack
             else:
-                output = torch.stack(outstack)
+                output2 = torch.stack(outstack)
                 layer_type = 'image'
-                layer = Layer.create(output,add_kwargs,layer_type)
+                layer = Layer.create(output2,add_kwargs,layer_type)
+
+                # clean up
+                del output2
+                del outstack
+
+        #clean up
+        del pt_data
+        del gen
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        memory_stats()    
     
-        return layer
+    return layer
