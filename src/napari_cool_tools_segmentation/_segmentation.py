@@ -8,7 +8,7 @@ from napari.types import ImageData, LabelsData, LayerDataTuple
 from napari_cool_tools_img_proc import torch,kornia,viewer,device
 
 @magic_factory()
-def segmentation_inference(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints")) -> Layer:
+def segmentation_inference(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
     """
     """
     from models.pix2pixHD_model import InferenceModel
@@ -50,13 +50,31 @@ def segmentation_inference(img:Image, state_dict_path=Path("D:\JJ\Development\Ch
     #print(pt_data.min(),pt_data.max())
 
     output = gen(pt_data)
+
+    retina = output[0] == 1
+    choroid = output[1] == 1
+    sclera = output[2] == 1
+
+    print(retina)
+    labels = torch.empty_like(output[0])
+    labels[retina] = 1
+    labels[choroid] = 2
+    labels[sclera] = 3
+    labels = labels.to(torch.uint8)
+    labels = labels.detach().cpu().numpy()
+
     output = output.detach().cpu().numpy()
     print(output.shape)
     print(output.min(),output.max())
 
     name = f"{img.name}_Seg"
     add_kwargs = {"name":f"{name}"}
-    layer_type = 'image'
-    layer = Layer.create(output,add_kwargs,layer_type)
+
+    if label_flag:
+        layer_type = 'labels'
+        layer = Layer.create(labels,add_kwargs,layer_type)
+    else:
+        layer_type = 'image'
+        layer = Layer.create(output,add_kwargs,layer_type)
 
     return layer
