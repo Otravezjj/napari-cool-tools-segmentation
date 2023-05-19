@@ -9,8 +9,15 @@ from napari.types import ImageData, LabelsData, LayerDataTuple
 from napari_cool_tools_img_proc import torch,kornia,viewer,device
 
 @magic_factory()
-def segmentation_inference(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
+def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
     """
+    Args:
+        img (Image): Image to be adjusted.
+        gamma(float): Non negative real number.
+        gain (float): Constant multiplier.
+        
+    Returns:
+        Logarithm corrected output image with '_LC' suffix added to name.
     """
     from models.pix2pixHD_model import InferenceModel
     model = InferenceModel()
