@@ -1,5 +1,5 @@
 """
-This module is contains code for segmenting images
+This module contains code for segmenting images
 """
 import gc
 from pathlib import Path
