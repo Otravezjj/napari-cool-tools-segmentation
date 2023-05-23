@@ -12,11 +12,9 @@ from napari.utils.notifications import show_info
 from napari.qt.threading import thread_worker
 from napari.layers import Image, Layer, Labels
 from napari.types import ImageData, LabelsData, LayerDataTuple
-from napari_cool_tools_img_proc import torch,kornia,viewer,device
+from napari_cool_tools_img_proc import torch,viewer,device,memory_stats
 
-def memory_stats():
-    show_info(f"Gpu memory allocated: {torch.cuda.memory_allocated()/1024**2}")
-    show_info(f"Gpu memory reserved: {torch.cuda.memory_reserved()/1024**2}")
+
 
 @magic_factory()
 def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True):
