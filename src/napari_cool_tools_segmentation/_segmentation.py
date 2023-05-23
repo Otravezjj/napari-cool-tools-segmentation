@@ -15,11 +15,11 @@ from napari.types import ImageData, LabelsData, LayerDataTuple
 from napari_cool_tools_img_proc import torch,kornia,viewer,device
 
 def memory_stats():
-    print(torch.cuda.memory_allocated()/1024**2)
-    print(torch.cuda.memory_cached()/1024**2)
+    show_info(f"Gpu memory allocated: {torch.cuda.memory_allocated()/1024**2}")
+    show_info(f"Gpu memory reserved: {torch.cuda.memory_reserved()/1024**2}")
 
 @magic_factory()
-def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
+def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -28,7 +28,7 @@ def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Chor
                            If false returns volume with unique channels masked with value 1.
         
     Returns:
-        Logarithm corrected output image with '_LC' suffix added to name.
+        Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
     """
     b_scan_pix2pixHD_seg_thread(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
     return
@@ -43,10 +43,12 @@ def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path("D:\JJ\Developme
                            If false returns volume with unique channels masked with value 1.
         
     Returns:
-        Logarithm corrected output image with '_LC' suffix added to name.
+        Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
     """
     show_info(f'B-scan segmentation thread has started')
     layer = b_scan_pix2pixHD_seg_func(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
+    torch.cuda.empty_cache()
+    memory_stats()
     show_info(f'B-scan segmentation thread has completed')
     return layer
 
@@ -59,7 +61,7 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
                            If false returns volume with unique channels masked with value 1.
         
     Returns:
-        Logarithm corrected output image with '_LC' suffix added to name.
+        Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
     """
     from models.pix2pixHD_model import InferenceModel
     model = InferenceModel()
@@ -167,6 +169,9 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
                 del output
                 del temp_data
 
+                #gc.collect()
+                #torch.cuda.empty_cache()
+
             if label_flag:
                 labels2 = torch.stack(outstack)
                 labels2 = labels2.to(torch.uint8)
@@ -191,13 +196,50 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
         del pt_data
         del gen
         gc.collect()
-        torch.cuda.empty_cache()
+        #torch.cuda.empty_cache()
 
-        memory_stats()    
+        #memory_stats()    
     
     return layer
 
 @magic_factory()
+def enface_unet_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict"), label_flag:bool=True):
+    """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
+    Args:
+        img (Image): Image/Volume to be segmented.
+        state_dict_path (Path): Path to state dictionary of the network to be used for inference.
+        label_flag (bool): If true return labels layer with relevant masks as unique label values
+                           If false returns volume with unique channels masked with value 1.
+        
+    Yields:
+        Image Layer containing padded enface image with '_Pad' suffix added to name
+        Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
+    """
+    enface_unet_seg_thread(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
+    return
+
+@thread_worker(connect={"yielded": viewer.add_layer})
+def enface_unet_seg_thread(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict"), label_flag:bool=True) -> List[Layer]:
+    """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
+    Args:
+        img (Image): Image/Volume to be segmented.
+        state_dict_path (Path): Path to state dictionary of the network to be used for inference.
+        label_flag (bool): If true return labels layer with relevant masks as unique label values
+                           If false returns volume with unique channels masked with value 1.
+        
+    Yields:
+        Image Layer containing padded enface image with '_Pad' suffix added to name
+        Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
+    """
+    show_info(f'Enface segmentation thread has started')
+    layers = enface_unet_seg_func(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
+    torch.cuda.empty_cache()
+    memory_stats()
+    show_info(f'Enface segmentation thread has completed')
+    for layer in layers:
+        yield layer
+    #return layers
+
 def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict"), label_flag:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
@@ -206,12 +248,15 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaro
         label_flag (bool): If true return labels layer with relevant masks as unique label values
                            If false returns volume with unique channels masked with value 1.
         
-    Returns:
-        Logarithm corrected output image with '_LC' suffix added to name.
+    Yields:
+        Image Layer containing padded enface image with '_Pad' suffix added to name
+        Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
     """
     from jj_nn_framework.image_funcs import normalize_in_range, pad_to_target_2d, pad_to_targetM_2d, bw_1_to_3ch
     from torchvision import transforms
     from kornia.enhance import equalize_clahe
+
+    layers_out = []
 
     pttm_params = {
         'h': 864,
@@ -225,41 +270,42 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaro
 
     data = img.data.copy()
     pt_data = torch.tensor(data,device=device)
-    print(f"pt_data shape: {pt_data.shape}\n")
+    #print(f"pt_data shape: {pt_data.shape}\n")
     ch3_data = bw_1_to_3ch(pt_data,data_format='HW')
-    print(f"ch3_data shape: {ch3_data.shape}\n")
+    #print(f"ch3_data shape: {ch3_data.shape}\n")
     norm_ch3_data = normalize_in_range(ch3_data,0.0,1.0)
-    print(f"norm_ch3_data shape: {norm_ch3_data.shape}\n")
+    #print(f"norm_ch3_data shape: {norm_ch3_data.shape}\n")
     pad_data = pad_to_targetM_2d(norm_ch3_data,(864,864),'NCHW')
 
     name = f"{img.name}_Pad"
     add_kwargs = {"name":f"{name}"}
     layer_type = "image"
 
-    out = pad_data.detach().cpu().numpy()
-    layer = Layer.create(out,add_kwargs,layer_type)
-    yield layer
+    out = pad_data.detach().cpu().numpy().squeeze()
+    pad_img = Layer.create(out[0],add_kwargs,layer_type)
+
+    # clean up
+    #del pt_data
+    #del ch3_data
+    #del norm_ch3_data
+
+    #yield pad_img
+    #del pad_img
+    layers_out.append(pad_img)
 
     x = normalize_in_range(pad_data,0,1)
     mean,std = x.mean([0,2,3]),x.std([0,2,3])
-    #print(x.shape,y.shape)
-    #print(mean,std)
     norm = transforms.Normalize(mean,std)
-    x = norm(x)
-    #x = (x-x.min())/(x.max()-x.min())
-    x = normalize_in_range(x,0,1)
+    x_norm = norm(x)
+    x_norm2 = normalize_in_range(x_norm,0,1)
 
-    x = equalize_clahe(x)
+    x_eq = equalize_clahe(x_norm2)
 
-    print(f"x shape: {x.shape}\n")
+    print(f"x shape: {x_eq.shape}\n")
 
     name = f"{img.name}_Seg"
     add_kwargs = {"name":f"{name}"}
     layer_type = "labels"
-
-    #out = x.detach().cpu().numpy()
-    #layer = Layer.create(out,add_kwargs,layer_type)
-    #return layer
 
     ENCODER = "efficientnet-b5"
     ENCODER_WEIGHTS = "imagenet"
@@ -276,12 +322,32 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaro
     model.load_state_dict(state_dict)
     model.eval()
     model_dev = model.to(device)
-    output = model_dev.predict(x)
+    output = model_dev.predict(x_eq)
+    
     seg_out = output.detach().cpu().numpy().squeeze().astype(int)
-    #seg_out = np.where(seg_out > 0.4, 1, 0)
-    print(f"seg_out shape: {seg_out.shape}\n")
     layer = Layer.create(seg_out,add_kwargs,layer_type)
     
-    print(type(model))
-    yield layer
-    
+    # clean up
+    del seg_out
+    del output
+    del model_dev
+    del model
+    del x_eq
+    del x_norm2
+    del x_norm
+    del norm
+    del mean
+    del std
+    del x
+    del out
+    del pad_data
+    del norm_ch3_data
+    del ch3_data
+    del pt_data
+
+    gc.collect()
+    #torch.cuda.empty_cache()
+    #memory_stats()
+
+    layers_out.append(layer)
+    return layers_out
