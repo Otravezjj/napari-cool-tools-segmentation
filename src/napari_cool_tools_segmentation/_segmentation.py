@@ -136,7 +136,7 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
         
         elif data.ndim == 3:
             outstack = []
-            for i in tqdm(range(len(data)),desc="Current image"):
+            for i in tqdm(range(len(data)),desc="B-scan Seg"):
 
                 temp_data = pt_data[i].unsqueeze(0).repeat(3,1,1)
                 output = gen(temp_data)
