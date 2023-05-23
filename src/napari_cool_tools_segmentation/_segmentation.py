@@ -2,6 +2,7 @@
 This module contains code for segmenting images
 """
 import gc
+import segmentation_models_pytorch as smp
 from pathlib import Path
 from magicgui import magicgui, magic_factory
 from tqdm import tqdm
@@ -193,3 +194,57 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
         memory_stats()    
     
     return layer
+
+@magic_factory()
+def enface_unetPlusPlus_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out"), label_flag:bool=True) -> Layer:
+    """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
+    Args:
+        img (Image): Image/Volume to be segmented.
+        state_dict_path (Path): Path to state dictionary of the network to be used for inference.
+        label_flag (bool): If true return labels layer with relevant masks as unique label values
+                           If false returns volume with unique channels masked with value 1.
+        
+    Returns:
+        Logarithm corrected output image with '_LC' suffix added to name.
+    """
+    from jj_nn_framework.image_funcs import normalize_in_range, pad_to_target_2d, pad_to_targetM_2d, bw_1_to_3ch
+
+    pttm_params = {
+        'h': 864,
+        'w': 864,
+        'X_data_format': 'NCHW',
+        'y_data_format': 'NHW',
+        'mode': 'constant',
+        'value': None,
+        'device': DEVICE
+    }
+
+    data = img.data.copy()
+    pt_data = torch.tensor(data,device=device)
+    ch3_data = bw_1_to_3ch(pt_data,data_format='NHW')
+    pad_data = pad_to_targetM_2d(ch3_data,)
+
+    name = f"{img.name}_Seg"
+    add_kwargs = {"name":f"{name}"}
+    layer_type = "image"
+
+    ENCODER = "efficientnet-b6"
+    ENCODER_WEIGHTS = "imagenet"
+    CLASSES = [
+        "vessel"
+    ]
+    ACTIVATION = "sigmoid"
+
+    model = smp.UnetPlusPlus(encoder_name=ENCODER, # smp.Unet(encoder_name=ENCODER,
+                    encoder_weights=ENCODER_WEIGHTS,
+                    classes=len(CLASSES),
+                    activation=ACTIVATION)
+    
+    model.eval()
+    output = model.predict(pt_data)
+    seg_out = output.detach().cpu().numpy()
+    layer = Layer.create(seg_out,add_kwargs,layer_type)
+    
+    print(type(model))
+    return layer
+    
