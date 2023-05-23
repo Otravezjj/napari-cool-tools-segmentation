@@ -6,13 +6,12 @@ import numpy as np
 import segmentation_models_pytorch as smp
 from pathlib import Path
 from typing import List
-from magicgui import magicgui, magic_factory
+from magicgui import magic_factory
 from tqdm import tqdm
 from napari.utils.notifications import show_info
 from napari.qt.threading import thread_worker
-from napari.layers import Image, Layer, Labels
-from napari.types import ImageData, LabelsData, LayerDataTuple
-from napari_cool_tools_img_proc import torch,viewer,device,memory_stats
+from napari.layers import Image, Layer
+from napari_cool_tools_io import torch,viewer,device,memory_stats
 
 
 
