@@ -2,16 +2,16 @@ name: napari-cool-tools-segmentation
 display_name: Napari COOL Tools Segmentation
 contributions:
   commands:
-    - id: napari-cool-tools-segmentation.inference_bscan
+    - id: napari-cool-tools-segmentation.pix2pix_inference_bscan
       title: Pix2pixHD B-scan Segmentation
       python_name: napari_cool_tools_segmentation._segmentation:b_scan_pix2pixHD_seg
-    - id: napari-cool-tools-segmentation.inference_enface
+    - id: napari-cool-tools-segmentation.unet_inference_enface
       title: Unet++ Enface Segmentation
-      python_name: napari_cool_tools_segmentation._segmentation:enface_unetPlusPlus_seg_func
+      python_name: napari_cool_tools_segmentation._segmentation:enface_unet_seg_func
   widgets:
-    - command: napari-cool-tools-segmentation.inference_bscan
+    - command: napari-cool-tools-segmentation.pix2pix_inference_bscan
       display_name: Pix2pix B-scan Seg
       autogenerate: false
-    - command: napari-cool-tools-segmentation.inference_enface
-      display_name: Unet++ Enface Segmentation
+    - command: napari-cool-tools-segmentation.unet_inference_enface
+      display_name: Unet Enface Segmentation
       autogenerate: false

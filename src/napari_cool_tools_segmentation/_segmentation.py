@@ -2,8 +2,10 @@
 This module contains code for segmenting images
 """
 import gc
+import numpy as np
 import segmentation_models_pytorch as smp
 from pathlib import Path
+from typing import List
 from magicgui import magicgui, magic_factory
 from tqdm import tqdm
 from napari.utils.notifications import show_info
@@ -196,7 +198,7 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
     return layer
 
 @magic_factory()
-def enface_unetPlusPlus_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out"), label_flag:bool=True) -> Layer:
+def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict"), label_flag:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -208,6 +210,8 @@ def enface_unetPlusPlus_seg_func(img:Image, state_dict_path=Path("D:\JJ\Developm
         Logarithm corrected output image with '_LC' suffix added to name.
     """
     from jj_nn_framework.image_funcs import normalize_in_range, pad_to_target_2d, pad_to_targetM_2d, bw_1_to_3ch
+    from torchvision import transforms
+    from kornia.enhance import equalize_clahe
 
     pttm_params = {
         'h': 864,
@@ -216,35 +220,68 @@ def enface_unetPlusPlus_seg_func(img:Image, state_dict_path=Path("D:\JJ\Developm
         'y_data_format': 'NHW',
         'mode': 'constant',
         'value': None,
-        'device': DEVICE
+        'device': device
     }
 
     data = img.data.copy()
     pt_data = torch.tensor(data,device=device)
-    ch3_data = bw_1_to_3ch(pt_data,data_format='NHW')
-    pad_data = pad_to_targetM_2d(ch3_data,)
+    print(f"pt_data shape: {pt_data.shape}\n")
+    ch3_data = bw_1_to_3ch(pt_data,data_format='HW')
+    print(f"ch3_data shape: {ch3_data.shape}\n")
+    norm_ch3_data = normalize_in_range(ch3_data,0.0,1.0)
+    print(f"norm_ch3_data shape: {norm_ch3_data.shape}\n")
+    pad_data = pad_to_targetM_2d(norm_ch3_data,(864,864),'NCHW')
 
-    name = f"{img.name}_Seg"
+    name = f"{img.name}_Pad"
     add_kwargs = {"name":f"{name}"}
     layer_type = "image"
 
-    ENCODER = "efficientnet-b6"
+    out = pad_data.detach().cpu().numpy()
+    layer = Layer.create(out,add_kwargs,layer_type)
+    yield layer
+
+    x = normalize_in_range(pad_data,0,1)
+    mean,std = x.mean([0,2,3]),x.std([0,2,3])
+    #print(x.shape,y.shape)
+    #print(mean,std)
+    norm = transforms.Normalize(mean,std)
+    x = norm(x)
+    #x = (x-x.min())/(x.max()-x.min())
+    x = normalize_in_range(x,0,1)
+
+    x = equalize_clahe(x)
+
+    print(f"x shape: {x.shape}\n")
+
+    name = f"{img.name}_Seg"
+    add_kwargs = {"name":f"{name}"}
+    layer_type = "labels"
+
+    #out = x.detach().cpu().numpy()
+    #layer = Layer.create(out,add_kwargs,layer_type)
+    #return layer
+
+    ENCODER = "efficientnet-b5"
     ENCODER_WEIGHTS = "imagenet"
     CLASSES = [
         "vessel"
     ]
     ACTIVATION = "sigmoid"
 
-    model = smp.UnetPlusPlus(encoder_name=ENCODER, # smp.Unet(encoder_name=ENCODER,
+    model = smp.Unet(encoder_name=ENCODER, # smp.UnetPlusPlus(encoder_name=ENCODER,
                     encoder_weights=ENCODER_WEIGHTS,
                     classes=len(CLASSES),
                     activation=ACTIVATION)
-    
+    state_dict = torch.load(state_dict_path)
+    model.load_state_dict(state_dict)
     model.eval()
-    output = model.predict(pt_data)
-    seg_out = output.detach().cpu().numpy()
+    model_dev = model.to(device)
+    output = model_dev.predict(x)
+    seg_out = output.detach().cpu().numpy().squeeze().astype(int)
+    #seg_out = np.where(seg_out > 0.4, 1, 0)
+    print(f"seg_out shape: {seg_out.shape}\n")
     layer = Layer.create(seg_out,add_kwargs,layer_type)
     
     print(type(model))
-    return layer
+    yield layer
     
