@@ -282,7 +282,15 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaro
     layer_type = "image"
 
     out = pad_data.detach().cpu().numpy().squeeze()
-    pad_img = Layer.create(out[0],add_kwargs,layer_type)
+
+    offset_0 = out[0].shape[0] - data.shape[0]
+    offset_1 = out[0].shape[1] - data.shape[1]
+    start_0 = int(offset_0/2)
+    start_1 = int(offset_1/2)
+    end_0 = int(out[0].shape[0] - start_0)
+    end_1 = int(out[0].shape[1] - start_1)
+
+    #pad_img = Layer.create(out[0],add_kwargs,layer_type)
 
     # clean up
     #del pt_data
@@ -291,7 +299,7 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaro
 
     #yield pad_img
     #del pad_img
-    layers_out.append(pad_img)
+    #layers_out.append(pad_img)
 
     x = normalize_in_range(pad_data,0,1)
     mean,std = x.mean([0,2,3]),x.std([0,2,3])
@@ -325,9 +333,11 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaro
     output = model_dev.predict(x_eq)
     
     seg_out = output.detach().cpu().numpy().squeeze().astype(int)
-    layer = Layer.create(seg_out,add_kwargs,layer_type)
+    final_seg = seg_out[start_0:end_0,start_1:end_1]
+    layer = Layer.create(final_seg,add_kwargs,layer_type)
     
     # clean up
+    del final_seg
     del seg_out
     del output
     del model_dev
