@@ -92,8 +92,9 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
         pt_data = torch.tensor(data,device=device)
     
         gen = define_G(**def_g_settings)
-        gen.load_state_dict(state_dict)
-        gen.eval()
+        gen_dev = gen.to(device)
+        gen_dev.load_state_dict(state_dict)
+        gen_dev.eval()
         
         name = f"{img.name}_Seg"
         add_kwargs = {"name":f"{name}"}
@@ -191,6 +192,7 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
 
         #clean up
         del pt_data
+        del gen_dev
         del gen
         gc.collect()
         #torch.cuda.empty_cache()
