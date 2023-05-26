@@ -16,7 +16,7 @@ from napari_cool_tools_io import torch,viewer,device,memory_stats
 
 
 @magic_factory()
-def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True):
+def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path(r"D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints\uw_oct_retina_ARVO\40_net_G.pth"), label_flag:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -31,7 +31,7 @@ def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Chor
     return
 
 @thread_worker(connect={"returned": viewer.add_layer},progress=True)
-def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
+def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path(r"D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints\uw_oct_retina_ARVO\40_net_G.pth"), label_flag:bool=True) -> Layer:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -49,7 +49,7 @@ def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path("D:\JJ\Developme
     show_info(f'B-scan segmentation thread has completed')
     return layer
 
-def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints"), label_flag:bool=True) -> Layer:
+def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints\uw_oct_retina_ARVO\40_net_G.pth"), label_flag:bool=True) -> Layer:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -202,7 +202,7 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development
     return layer
 
 @magic_factory()
-def enface_unet_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict"), label_flag:bool=True):
+def enface_unet_seg(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict\unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -218,7 +218,7 @@ def enface_unet_seg(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNE
     return
 
 @thread_worker(connect={"yielded": viewer.add_layer})
-def enface_unet_seg_thread(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict"), label_flag:bool=True) -> List[Layer]:
+def enface_unet_seg_thread(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict\unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -239,7 +239,7 @@ def enface_unet_seg_thread(img:Image, state_dict_path=Path("D:\JJ\Development\Aa
         yield layer
     #return layers
 
-def enface_unet_seg_func(img:Image, state_dict_path=Path("D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict"), label_flag:bool=True) -> List[Layer]:
+def enface_unet_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict\unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
