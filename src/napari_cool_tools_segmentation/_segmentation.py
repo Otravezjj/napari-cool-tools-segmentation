@@ -16,7 +16,7 @@ from napari_cool_tools_io import torch,viewer,device,memory_stats
 
 
 @magic_factory()
-def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path(r"D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints\uw_oct_retina_ARVO\40_net_G.pth"), label_flag:bool=True):
+def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path("../nn_state_dicts/b-scan/40_net_G.pth"), label_flag:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -31,7 +31,7 @@ def b_scan_pix2pixHD_seg(img:Image, state_dict_path=Path(r"D:\JJ\Development\Cho
     return
 
 @thread_worker(connect={"returned": viewer.add_layer},progress=True)
-def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path(r"D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints\uw_oct_retina_ARVO\40_net_G.pth"), label_flag:bool=True) -> Layer:
+def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path("../nn_state_dicts/b-scan/40_net_G.pth"), label_flag:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -49,7 +49,7 @@ def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path(r"D:\JJ\Developm
     show_info(f'B-scan segmentation thread has completed')
     return layer
 
-def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Development\Choroid_Retina_Measurment2\pix2pixHD\checkpoints\uw_oct_retina_ARVO\40_net_G.pth"), label_flag:bool=True) -> Layer:
+def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/b-scan/40_net_G.pth"), label_flag:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -62,10 +62,8 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Developmen
     """
     from models.pix2pixHD_model import InferenceModel
     model = InferenceModel()
-    #model.initialize()
     state_dict = torch.load(state_dict_path)
-    #model.load_network(model.netG,'G','latest',state_dict_path)
-    #model.netG.load_state_dict(state_dict)
+
     from models.networks import define_G
 
     def_g_settings = {
@@ -167,9 +165,6 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Developmen
                 del output
                 del temp_data
 
-                #gc.collect()
-                #torch.cuda.empty_cache()
-
             if label_flag:
                 labels2 = torch.stack(outstack)
                 labels2 = labels2.to(torch.uint8)
@@ -194,15 +189,12 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Developmen
         del pt_data
         del gen_dev
         del gen
-        gc.collect()
-        #torch.cuda.empty_cache()
-
-        #memory_stats()    
+        gc.collect() 
     
     return layer
 
 @magic_factory()
-def enface_unet_seg(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict\unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True):
+def enface_unet_seg(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -218,7 +210,7 @@ def enface_unet_seg(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aaron_UN
     return
 
 @thread_worker(connect={"yielded": viewer.add_layer})
-def enface_unet_seg_thread(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict\unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True) -> List[Layer]:
+def enface_unet_seg_thread(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -239,7 +231,7 @@ def enface_unet_seg_thread(img:Image, state_dict_path=Path(r"D:\JJ\Development\A
         yield layer
     #return layers
 
-def enface_unet_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aaron_UNET_Mani_Images-Refactor\out_dict\unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True) -> List[Layer]:
+def enface_unet_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -288,17 +280,6 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aar
     start_1 = int(offset_1/2)
     end_0 = int(out[0].shape[0] - start_0)
     end_1 = int(out[0].shape[1] - start_1)
-
-    #pad_img = Layer.create(out[0],add_kwargs,layer_type)
-
-    # clean up
-    #del pt_data
-    #del ch3_data
-    #del norm_ch3_data
-
-    #yield pad_img
-    #del pad_img
-    #layers_out.append(pad_img)
 
     x = normalize_in_range(pad_data,0,1)
     mean,std = x.mean([0,2,3]),x.std([0,2,3])
@@ -355,8 +336,6 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path(r"D:\JJ\Development\Aar
     del pt_data
 
     gc.collect()
-    #torch.cuda.empty_cache()
-    #memory_stats()
 
     layers_out.append(layer)
     return layers_out
