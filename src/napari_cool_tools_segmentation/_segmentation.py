@@ -194,7 +194,8 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts
     return layer
 
 @magic_factory()
-def enface_unet_seg(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True):
+def enface_unet_seg(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), 
+                    use_cpu:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -206,11 +207,12 @@ def enface_unet_seg(img:Image, state_dict_path=Path("../nn_state_dicts/enface/un
         Image Layer containing padded enface image with '_Pad' suffix added to name
         Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
     """
-    enface_unet_seg_thread(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
+    enface_unet_seg_thread(img=img,state_dict_path=state_dict_path,use_cpu=use_cpu)
     return
 
 @thread_worker(connect={"yielded": viewer.add_layer})
-def enface_unet_seg_thread(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True) -> List[Layer]:
+def enface_unet_seg_thread(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), 
+                            use_cpu:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -223,7 +225,7 @@ def enface_unet_seg_thread(img:Image, state_dict_path=Path("../nn_state_dicts/en
         Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
     """
     show_info(f'Enface segmentation thread has started')
-    layers = enface_unet_seg_func(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
+    layers = enface_unet_seg_func(img=img,state_dict_path=state_dict_path,use_cpu=use_cpu)
     torch.cuda.empty_cache()
     memory_stats()
     show_info(f'Enface segmentation thread has completed')
@@ -231,7 +233,8 @@ def enface_unet_seg_thread(img:Image, state_dict_path=Path("../nn_state_dicts/en
         yield layer
     #return layers
 
-def enface_unet_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), label_flag:bool=True) -> List[Layer]:
+def enface_unet_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), 
+                         use_cpu:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -248,6 +251,9 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/enfa
     from kornia.enhance import equalize_clahe
 
     layers_out = []
+
+    if use_cpu:
+        device = 'cpu'
 
     pttm_params = {
         'h': 864,
@@ -306,7 +312,7 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/enfa
                     encoder_weights=ENCODER_WEIGHTS,
                     classes=len(CLASSES),
                     activation=ACTIVATION)
-    state_dict = torch.load(state_dict_path)
+    state_dict = torch.load(state_dict_path,map_location=device)
     model.load_state_dict(state_dict)
     model.eval()
     model_dev = model.to(device)
