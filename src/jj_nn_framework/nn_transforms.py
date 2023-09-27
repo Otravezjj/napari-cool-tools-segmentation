@@ -150,6 +150,67 @@ class JohnUnetTrainAug2(nn.Module):
             x,y = self.BT((x,y))
             
         return x,y
+    
+class JohnUnetTrainAug3(nn.Module):
+    def __init__(self,
+        target_imshape,hfp,vfp,bp,cp,
+        X_data_format = 'None',
+        y_data_format = 'None',
+        mode='constant',value=None,
+        low_sigma = 1.0,high_sigma = 6.0,truncate = 4.0,gamma = 1.2,gain = 1.0,
+        bf=(0.8,1.2),
+        cf=(0.8,1.2),
+        crs=(224,224),cr_shuff=True,
+        degrees=90,scale=(0.9,1.1),
+        bt_flag=True,
+        device='cpu',verbose=False,sanity=False):
+        super().__init__()
+        
+        self.device=device
+        self.PAD = PadToTargetM(h=target_imshape[0],w=target_imshape[1],X_data_format=X_data_format,y_data_format=y_data_format,mode=mode,value=value)
+        self.RHF = K.RandomHorizontalFlip(hfp,same_on_batch=False)
+        self.RVF = K.RandomVerticalFlip(vfp,same_on_batch=False)
+        self.CLAHE = NormalizeCLAHE()
+        self.DoG = DiffOfGaus(low_sigma=low_sigma,high_sigma=high_sigma,truncate=truncate,gamma=gamma,gain=gain)
+        self.RBr = K.RandomBrightness(brightness=bf,p=bp,same_on_batch=False)
+        self.RCo = K.RandomContrast(contrast=cf,p=cp,same_on_batch=False)
+        #self.RCr = K.RandomCrop(size=crs)
+        self.RCr = ImageCrops(h=crs[0],w=crs[1],shuffle=cr_shuff,device=device,verbose=verbose,sanity=sanity)
+        self.RAT = K.RandomAffine(degrees,translate=None,scale=scale,shear=None,resample=Resample.BILINEAR.name,
+            padding_mode=SamplePadding.REFLECTION.name,same_on_batch=False,p=1.0
+        )
+        self.BT = BinaryTarget()
+        self.BT_flag = bt_flag
+        
+    def forward(self, t):
+        
+        x = t[0]
+        y = t[1]
+
+        #print(f"Initial input:\nx shape: {x.shape}, y shape: {y.shape}\n")
+        x,y = self.PAD((x,y))
+        #print(f"Post padding:\nx shape: {x.shape}, y shape: {y.shape}\n")
+        x,y = self.CLAHE((x,y))
+        #print(f"Post CLAHE:\nx shape: {x.shape}, y shape: {y.shape}\n")
+        x,y = self.DoG((x,y))
+        x,y = self.RCr((x,y))
+        
+        x = self.RHF(x)
+        y = self.RHF(y,params=self.RHF._params)
+
+        x = self.RVF(x)
+        y = self.RVF(y,params=self.RVF._params)
+
+        x = self.RBr(x)
+        x = self.RCo(x)
+                
+        x = self.RAT(x)
+        y = self.RAT(y,params=self.RAT._params)
+
+        if self.BT_flag:
+            x,y = self.BT((x,y))
+            
+        return x,y
 
 class ImageCrops(nn.Module):
     def __init__(self,h,w,shuffle=True,device='cpu',verbose=False,sanity=False):
@@ -287,7 +348,35 @@ class PadToTargetM(nn.Module):
         x = pad_to_targetM_2d(x,(self.h,self.w),data_format=self.X_data_format,mode=self.mode,value=self.value)
         y = pad_to_targetM_2d(y,(self.h,self.w),data_format=self.y_data_format,mode=self.mode,value=self.value)
             
-        return (x,y) 
+        return (x,y)
+    
+class DiffOfGaus(nn.Module):
+    def __init__(self, low_sigma, high_sigma, truncate=4.0, gamma=1.0, gain=1.0):
+        super().__init__()
+
+        #self.l_sig = low_sigma
+        #self.h_sig = high_sigma
+        #self.trunc = truncate
+
+        radius_low = round(truncate * low_sigma)
+        radius_high = round(truncate * high_sigma)
+        self.kernel_low = 2 * radius_low + 1
+        self.kernel_high = 2 * radius_high + 1
+        self.gamma = gamma
+        self.gain = gain
+       
+    def forward(self, t):
+        x = t[0]
+        y = t[1]
+        
+        #Code DiffOGaus
+        blur_low = TF.gaussian_blur(x,self.kernel_low)
+        blur_high = TF.gaussian_blur(x,self.kernel_high)
+        x = blur_low - blur_high
+        x = normalize_in_range(x,0.0,1.0)
+        x = TF.adjust_gamma(x,self.gamma,self.gain)
+            
+        return (x,y)
 
 class BinaryTarget(nn.Module):
     def __init__(self):
