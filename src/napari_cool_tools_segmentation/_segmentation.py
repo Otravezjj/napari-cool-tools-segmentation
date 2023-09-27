@@ -46,10 +46,20 @@ def b_scan_pix2pixHD_seg_thread(img:Image, state_dict_path=Path("../nn_state_dic
     layer = b_scan_pix2pixHD_seg_func(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
     torch.cuda.empty_cache()
     memory_stats()
+    #out_bscans = []
+    #for bscan in img:
+    #    out_bscan = b_scan_pix2pixHD_seg_func(img=img,state_dict_path=state_dict_path,label_flag=label_flag)
+    #    out_bscan = out_bscan.data
+    #    out_bscans.append(out_bscan)
+    #    torch.cuda.empty_cache()
+    #    memory_stats()
+    #out_data = np.concatenate(out_bscans)
+    #name = f"{img.name}_Seg"
+    #add_kwargs = {"name":f"{name}"}
     show_info(f'B-scan segmentation thread has completed')
     return layer
 
-def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/b-scan/40_net_G.pth"), label_flag:bool=True):
+def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("./nn_state_dicts/b-scan/latest_net_G.pth"), label_flag:bool=True):
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
         img (Image): Image/Volume to be segmented.
@@ -164,6 +174,10 @@ def b_scan_pix2pixHD_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts
                 del sclera
                 del output
                 del temp_data
+                
+                #clear cache from the loop
+                #gc.collect() 
+                #torch.cuda.empty_cache()
 
             if label_flag:
                 labels2 = torch.stack(outstack)
@@ -233,7 +247,7 @@ def enface_unet_seg_thread(img:Image, state_dict_path=Path("../nn_state_dicts/en
         yield layer
     #return layers
 
-def enface_unet_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), 
+def enface_unet_seg_func(img:Image, state_dict_path=Path("./nn_state_dicts/enface/unet_efficientnet-b5_imagenet_dc10_sd_60_lr_5e-04_40EP_BS_32_04-19-2023_17h10m.pth"), 
                          use_cpu:bool=True) -> List[Layer]:
     """Function runs image/volume through pixwpixHD trained generator network to create segmentation labels. 
     Args:
@@ -246,6 +260,7 @@ def enface_unet_seg_func(img:Image, state_dict_path=Path("../nn_state_dicts/enfa
         Image Layer containing padded enface image with '_Pad' suffix added to name
         Labels Layer containing B-scan segmentations with '_Seg' suffix added to name.
     """
+    from napari_cool_tools_io import device
     from jj_nn_framework.image_funcs import normalize_in_range, pad_to_target_2d, pad_to_targetM_2d, bw_1_to_3ch
     from torchvision import transforms
     from kornia.enhance import equalize_clahe
