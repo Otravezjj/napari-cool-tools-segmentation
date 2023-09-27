@@ -39,6 +39,9 @@ def batch_update(X:torch.Tensor, y:torch.Tensor,
     # 2. Calculate
     loss = loss_fn(pred, y)
 
+    # 3. Loss backward
+    loss.backward()
+
   return loss,pred
 
 
